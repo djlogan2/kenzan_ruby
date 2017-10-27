@@ -1,0 +1,17 @@
+<h1>Employee#show</h1>
+<table>
+  <tr><td>username</td><td><%= @employee.username%></td></tr>
+  <tr><td>First name</td><td><%= @employee.firstName%></td></tr>
+  <tr><td>Middle Initial</td><td><%= @employee.middleInitial%></td></tr>
+  <tr><td>Last Name</td><td><%= @employee.lastName%></td></tr>
+  <tr><td>Date of Birth</td><td><%= @employee.dateOfBirth%></td></tr>
+  <tr><td>Date of Employment</td><td><%= @employee.dateOfEmployment%></td></tr>
+  <tr><td>Roles</td><td>
+    <%= select_tag(
+            :unused,
+            options_for_select(EmployeeRole.pluck(:role), @employee.employee_roles.pluck(:role)),
+            { :disabled => true, :multiple => true, :size => 5, :id => "emmployee_role" })
+    %>
+  </td></tr>
+</table>
+
