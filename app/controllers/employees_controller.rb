@@ -1,8 +1,8 @@
-require('error_status')
+require('employee_status')
 
 class EmployeesController < ApplicationController
   def index;
-    @employees = Employee.where(:bStatus => EmployeeStatus::ACTIVE)
+    @employees = Employee.all
   end
 
   def create
@@ -26,8 +26,9 @@ class EmployeesController < ApplicationController
   end
 
   def show;
-    @employee = Employee.find_by id: params[:id], bStatus: EmployeeStatus::ACTIVE
-    if @employee == nil || !Employee.exists?(@employee.id)
+    begin
+      @employee = Employee.find(params[:id])
+    rescue ActiveRecord::RecordNotFound
       @messages = 'Invalid employee id'
       @employees = index
       render :index
@@ -35,8 +36,9 @@ class EmployeesController < ApplicationController
   end
 
   def edit;
-    @employee = Employee.find_by id: params[:id], bStatus: EmployeeStatus::ACTIVE
-    if @employee == nil || !Employee.exists?(@employee.id)
+    begin
+      @employee = Employee.find(params[:id])
+    rescue ActiveRecord::RecordNotFound
       @messages = 'Invalid employee id'
       @employees = index
       render :index
@@ -45,7 +47,14 @@ class EmployeesController < ApplicationController
 
   def update;
     p_employee = Employee.new(employee_params)
-    @employee = Employee.find(params[:id])
+
+    begin
+      @employee = Employee.find(params[:id])
+    rescue ActiveRecord::RecordNotFound
+      @messages = 'Unable to find employee record'
+      render :index
+    end
+
     @employee.username = p_employee.username
     @employee.firstName = p_employee.firstName
     @employee.middleInitial = p_employee.middleInitial
@@ -63,7 +72,13 @@ class EmployeesController < ApplicationController
   end
 
   def destroy
-    employee = Employee.find_by id: params[:id], bStatus: EmployeeStatus::ACTIVE
+    begin
+      employee = Employee.find(params[:id])
+    rescue ActiveRecord::RecordNotFound
+      @messages = 'Employee record not found'
+      render :index
+    end
+
     employee.bStatus = EmployeeStatus::INACTIVE
     if employee.save
       @employees = index

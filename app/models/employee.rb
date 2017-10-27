@@ -6,4 +6,8 @@ class Employee < ApplicationRecord
   validates :firstName, presence: true
   validates :lastName, presence: true
   validates :dateOfBirth, presence: true
+
+  def self.default_scope
+    where(:bStatus => EmployeeStatus::ACTIVE) #.select([:id, :username, :firstName, :middleInitial, :lastName, :dateOfBirth, :dateOfEmployment])
+  end
 end
