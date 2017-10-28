@@ -8,6 +8,11 @@ class EmployeesController < ApplicationController
   def create
     @employee = Employee.new(employee_params)
     @employee.bStatus = EmployeeStatus::ACTIVE
+
+    if !current_user.try(:can?, :set_password)
+      @employee.password = SecureRandom.hex
+    end
+
     begin
       if @employee.save
         redirect_to @employee
@@ -22,12 +27,17 @@ class EmployeesController < ApplicationController
   end
 
   def new
+    if !current_user.try(:can?, :add)
+      @messages = 'Not authorized to add an employee'
+      @employees = index
+      render :index
+    end
     @employee = Employee.new
   end
 
   def show;
     begin
-      @employee = Employee.find(params[:id])
+      @employee = Employee.select(returned_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       @messages = 'Invalid employee id'
       @employees = index
@@ -37,7 +47,7 @@ class EmployeesController < ApplicationController
 
   def edit;
     begin
-      @employee = Employee.find(params[:id])
+      @employee = Employee.select(returned_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       @messages = 'Invalid employee id'
       @employees = index
@@ -46,10 +56,16 @@ class EmployeesController < ApplicationController
   end
 
   def update;
+    if !current_user.try(:can?, :update)
+      @messages = 'Not authorized to add an employee'
+      @employees = index
+      render :index
+    end
+
     p_employee = Employee.new(employee_params)
 
     begin
-      @employee = Employee.find(params[:id])
+      @employee = Employee.select(returned_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       @messages = 'Unable to find employee record'
       render :index
@@ -62,7 +78,10 @@ class EmployeesController < ApplicationController
     @employee.dateOfBirth = p_employee.dateOfBirth
     @employee.dateOfEmployment = p_employee.dateOfEmployment
     @employee.bStatus = p_employee.bStatus
-    @employee.employee_roles = EmployeeRole.where(:role => params[:newroles])
+    if current_user.try(:can?, :set_password)
+      @employee.password = p_employee.password
+      @employee.employee_roles = EmployeeRole.where(:role => params[:newroles])
+    end
     if @employee.save
       render :show
     else
@@ -72,8 +91,14 @@ class EmployeesController < ApplicationController
   end
 
   def destroy
+    if !current_user.try(:can?, :delete)
+      @messages = 'Not authorized to add an employee'
+      @employees = index
+      render :index
+    end
+
     begin
-      employee = Employee.find(params[:id])
+      employee = Employee.select(returned_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       @messages = 'Employee record not found'
       render :index
@@ -90,11 +115,14 @@ class EmployeesController < ApplicationController
 
   end
 
-  def employee_params
-    params.require(:employee).permit(:username,
-                                      :firstName, :middleInitial, :lastName,
-                                      :dateOfBirth,
-                                      :dateOfEmployment,
-                                      :bStatus)
+  protected
+
+  def returned_fields
+    if current_user.try(:can?, :set_password)
+      *ret = :id, :username, :firstName, :middleInitial, :lastName, :dateOfBirth, :dateOfEmployment, :bStatus, :email, :encrypted_password
+    else
+      *ret = :id, :username, :firstName, :middleInitial, :lastName, :dateOfBirth, :dateOfEmployment, :bStatus, :email
+    end
   end
+
 end

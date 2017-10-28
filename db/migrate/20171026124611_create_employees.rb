@@ -5,8 +5,8 @@ class CreateEmployees < ActiveRecord::Migration[5.1]
       t.string :firstName, null: false
       t.string :middleInitial
       t.string :lastName, null: false
-      t.string :password
-      t.integer :bStatus, null: false
+      # t.string :password  Handled by devise now
+      t.integer :bStatus, null: false, default: EmployeeStatus::ACTIVE
       t.date :dateOfBirth, null: false
       t.date :dateOfEmployment
       t.timestamps
@@ -15,7 +15,7 @@ class CreateEmployees < ActiveRecord::Migration[5.1]
       CREATE TRIGGER VerifyEmployeeInsert BEFORE INSERT ON employees
         FOR EACH ROW
           BEGIN
-            IF (SELECT COUNT(1) FROM employees WHERE employees.username = NEW.username AND employees.bStatus = 0) > 0 THEN
+            IF (SELECT COUNT(1) FROM employees E WHERE E.username = NEW.username AND E.bStatus = 0) > 0 THEN
               SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Unable to insert duplicate username';
             END IF;
           END;
@@ -23,15 +23,11 @@ class CreateEmployees < ActiveRecord::Migration[5.1]
     execute <<-SQL
       CREATE TRIGGER VerifyEmployeeUpdate BEFORE UPDATE ON employees
       FOR EACH ROW
-      BEGIN
-        IF OLD.bStatus = 0 THEN
-          BEGIN
-            IF (SELECT COUNT(1) FROM employees WHERE OLD.username = employees.username AND employees.id <> OLD.id and employees.bStatus = 0) > 0 THEN
-              SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Unable to insert duplicate username';
-            END IF;
-          END;
-        END IF;
-      END;
+        BEGIN
+          IF (SELECT COUNT(1) FROM employees E WHERE E.username = NEW.username AND E.id <> NEW.id and E.bStatus = 0 and E.bStatus = NEW.bStatus) > 0 THEN
+                SIGNAL SQLSTATE '45001' SET MESSAGE_TEXT = 'Unable to insert duplicate username';
+          END IF;
+        END;
     SQL
 
   end

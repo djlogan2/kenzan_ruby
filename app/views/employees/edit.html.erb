@@ -25,16 +25,22 @@
         <td><%= f.label :dateOfEmployment, 'Date of employment' %></td>
         <td><%= f.text_field :dateOfEmployment %></td>
       </tr>
-      <tr>
-        <td><%= f.label :roles, 'Roles'%></td>
-        <td>
-          <%= select_tag(
-                  :newroles,
-                  options_for_select(EmployeeRole.pluck(:role), @employee.employee_roles.pluck(:role)),
-                  { :multiple => true, :size => 5, :id => "emmployee_role" })
-          %>
-        </td>
-      </tr>
+      <% if @employee.has_attribute? :encrypted_password %>
+        <tr>
+          <td><%= f.label :password, 'Password' %></td>
+          <td><%= f.password_field :password %></td>
+        </tr>
+          <tr>
+            <td><%= f.label :roles, 'Roles'%></td>
+            <td>
+              <%= select_tag(
+                      :newroles,
+                      options_for_select(EmployeeRole.pluck(:role), @employee.employee_roles.pluck(:role)),
+                      { :multiple => true, :size => 5, :id => "emmployee_role" })
+              %>
+            </td>
+          </tr>
+      <% end %>
       <tr><td><%= f.submit %></td><td><%= link_to 'Delete', employee_path(@employee), method: :delete %></td></tr>
     </table>
     <%= @messages %>

@@ -1,24 +1,17 @@
 class RestController < ApplicationController
-  def employee_params
-    params.require(:employee).permit(:username,
-                                      :firstName, :middleInitial, :lastName,
-                                      :dateOfBirth,
-                                      :dateOfEmployment,
-                                      :bStatus)
-  end
 
   def get_all
-    employees = Employee.where(:bStatus => 0)
+    employees = Employee.all
     render :json => employees
   end
 
   def get_emp
-    employee = Employee.where(:id => params[:id], :bStatus =>0)
+    employee = Employee.find(params[:id])
     render :json => employee
   end
 
   def delete_emp
-    employee = Employee.where(:id => params[:id], :bStatus =>0)
+    employee = Employee.find(params[:id])
     employee.delete
     render :json => ErrorResponse.new(employee.id )
   end
@@ -29,6 +22,9 @@ class RestController < ApplicationController
 
   def add_emp
     employee = Employee.new(employee_params)
+    employee.password = SecureRandom.hex
+    employee.email = 'none@none.non'
+
     if employee.save
       render :json => ErrorResponse.new(employee.id )
     else
@@ -38,7 +34,7 @@ class RestController < ApplicationController
 
   def update_emp
     updates = Employee.new(employee_params)
-    employee = Employee.find_by_id_and_bStatus(params[:id], 0)
+    employee = Employee.find(params[:id])
     employee.username = updates.username
     employee.firstName = updates.firstName
     employee.middleInitial = updates.middleInitial

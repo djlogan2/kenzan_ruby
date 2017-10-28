@@ -32,12 +32,22 @@ ActiveRecord::Schema.define(version: 201710261500000) do
     t.string "firstName", null: false
     t.string "middleInitial"
     t.string "lastName", null: false
-    t.string "password"
-    t.integer "bStatus", null: false
+    t.integer "bStatus", default: 0, null: false
     t.date "dateOfBirth", null: false
     t.date "dateOfEmployment"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
+    t.integer "sign_in_count", default: 0, null: false
+    t.datetime "current_sign_in_at"
+    t.datetime "last_sign_in_at"
+    t.string "current_sign_in_ip"
+    t.string "last_sign_in_ip"
+    t.index ["reset_password_token"], name: "index_employees_on_reset_password_token", unique: true
   end
 
   add_foreign_key "employee_to_roles", "employee_roles"

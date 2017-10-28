@@ -9,11 +9,15 @@
   </head>
 
   <body>
+  <p class="notice"><%= notice %></p>
+  <p class="alert"><%= alert %></p>
   <div>
-    <table>
-      <tr><td>Index</td><td>Login(out)</td></tr>
-    </table>
-  </div>
+    <% if employee_signed_in? %>
+        Logged in as <strong><%= current_employee.username %></strong>.
+        <%= link_to "Logout", destroy_employee_session_path, method: :delete, :class => 'navbar-link'  %>
+    <% else %>
+        <%= link_to "Login", new_employee_session_path, :class => 'navbar-link'  %>
+    <% end %>  </div>
   <div><%= yield %></div>
   <div>Copyright footer 2017 etc. etc. etc.</div>
 
