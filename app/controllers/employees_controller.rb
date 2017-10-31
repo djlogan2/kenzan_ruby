@@ -1,6 +1,9 @@
 require('employee_status')
 
 class EmployeesController < ApplicationController
+  before_action :authenticate_employee!
+  protect_from_forgery with: :exception
+
   def index;
     @employees = Employee.all
   end
@@ -37,7 +40,7 @@ class EmployeesController < ApplicationController
 
   def show;
     begin
-      @employee = Employee.select(returned_fields).find(params[:id])
+      @employee = Employee.select(returned_employee_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       @messages = 'Invalid employee id'
       @employees = index
@@ -47,7 +50,7 @@ class EmployeesController < ApplicationController
 
   def edit;
     begin
-      @employee = Employee.select(returned_fields).find(params[:id])
+      @employee = Employee.select(returned_employee_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       @messages = 'Invalid employee id'
       @employees = index
@@ -65,7 +68,7 @@ class EmployeesController < ApplicationController
     p_employee = Employee.new(employee_params)
 
     begin
-      @employee = Employee.select(returned_fields).find(params[:id])
+      @employee = Employee.select(returned_employee_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       @messages = 'Unable to find employee record'
       render :index
@@ -98,7 +101,7 @@ class EmployeesController < ApplicationController
     end
 
     begin
-      employee = Employee.select(returned_fields).find(params[:id])
+      employee = Employee.select(returned_employee_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
       @messages = 'Employee record not found'
       render :index
@@ -117,11 +120,19 @@ class EmployeesController < ApplicationController
 
   protected
 
-  def returned_fields
+  def employee_params
     if current_user.try(:can?, :set_password)
-      *ret = :id, :username, :firstName, :middleInitial, :lastName, :dateOfBirth, :dateOfEmployment, :bStatus, :email, :encrypted_password
+      params.require(:employee).permit(:id, :username,
+                                       :firstName, :middleInitial, :lastName,
+                                       :dateOfBirth,
+                                       :dateOfEmployment,
+                                       :bStatus, :email, :password, :employee_roles)
     else
-      *ret = :id, :username, :firstName, :middleInitial, :lastName, :dateOfBirth, :dateOfEmployment, :bStatus, :email
+      params.require(:employee).permit(:id, :username,
+                                       :firstName, :middleInitial, :lastName,
+                                       :dateOfBirth,
+                                       :dateOfEmployment,
+                                       :bStatus, :email)
     end
   end
 

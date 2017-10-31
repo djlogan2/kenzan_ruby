@@ -1,3 +1,5 @@
+require('employee_status')
+
 class Employee < ApplicationRecord
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable and :omniauthable
@@ -9,6 +11,20 @@ class Employee < ApplicationRecord
   validates :firstName, presence: true
   validates :lastName, presence: true
   validates :dateOfBirth, presence: true
+
+  def as_json(options)
+    return {
+        id: id,
+        bStatus: (bStatus == EmployeeStatus::ACTIVE ? 'ACTIVE' : 'INACTIVE'),
+        username: username,
+        firstName: firstName,
+        middleInitial: middleInitial,
+        lastName: lastName,
+        dateOfBirth: dateOfBirth.to_time,  # dateToDateTime(dateOfBirth).to_s,
+        dateOfEmployment: (dateOfEmployment.nil? ? nil : dateOfEmployment.to_time), # dateToDateTime(dateOfEmployment).to_s,
+        email: email
+    }
+  end
 
   def can? do_what
     case do_what
@@ -24,6 +40,7 @@ class Employee < ApplicationRecord
         false
     end
   end
+
   def will_save_change_to_email?
     false
   end
