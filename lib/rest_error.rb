@@ -1,0 +1,3 @@
+
+class RestError
+end
