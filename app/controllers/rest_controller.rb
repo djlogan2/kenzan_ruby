@@ -5,20 +5,24 @@ require('rest_error')
 
 class RestController < ApplicationController
   before_action :authenticate_employee!, :except => :login
-  before_action :adjust_ids
+  before_action :adjust_parameters
 
   ActionController::Parameters.action_on_unpermitted_parameters = :raise
 
   rescue_from Exception do |e|
-    render :json => ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, e.as_json )
+    render :json => ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, e.as_json)
   end
 
   rescue_from ActiveRecord::UnknownAttributeError do |uae|
-    render :json => ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, uae.to_s )
+    render :json => ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, uae.to_s)
   end
 
   rescue_from ActionController::UnpermittedParameters do |pme|
-    render :json => ErrorResponse.new(ErrorCode::CANNOT_INSERT_UNKNOWN_FIELDS, 'Unknown fields' )
+    if params[:action] == 'set_password' or params[:action] == 'login'
+      render :json => ErrorResponse.new(ErrorCode::INVALID_USERNAME_OR_PASSWORD, 'Unknown fields')
+    else
+      render :json => ErrorResponse.new(ErrorCode::CANNOT_INSERT_UNKNOWN_FIELDS, 'Unknown fields')
+    end
   end
 
   def get_all
@@ -37,7 +41,7 @@ class RestController < ApplicationController
 
   def delete_emp
     if !current_user.try(:can?, :delete)
-      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized' )
+      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized')
       return
     end
     begin
@@ -45,20 +49,25 @@ class RestController < ApplicationController
       employee.bStatus = EmployeeStatus::INACTIVE
       employee.save
       #employee.delete
-      render :json => ErrorResponse.new(employee.id )
+      render :json => ErrorResponse.new(employee.id)
     rescue ActiveRecord::RecordNotFound
-      render :json => ErrorResponse.new(ErrorCode::CANNOT_DELETE_NONEXISTENT_RECORD, 'Record not found' )
+      render :json => ErrorResponse.new(ErrorCode::CANNOT_DELETE_NONEXISTENT_RECORD, 'Record not found')
     end
 
   end
 
   def login
+    if !params.has_key?(:rest) or !params[:rest].has_key?(:username) or !params[:rest].has_key?(:password)
+      render :json => ErrorResponse.new(ErrorCode::INVALID_USERNAME_OR_PASSWORD, 'Not authorized')
+      return
+    end
+    params.require(:rest).permit(:username, :password)
     authenticate_employee
   end
 
   def add_emp
     if !current_user.try(:can?, :add)
-      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized' )
+      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized')
       return
     end
 
@@ -73,24 +82,20 @@ class RestController < ApplicationController
       employee.password = SecureRandom.hex
     end
 
-    if employee.email.blank?
-      employee.email = 'none@none.non'
-    end
-
     begin
       if employee.save
-        render :json => ErrorResponse.new(employee.id )
+        render :json => ErrorResponse.new(employee.id)
       else
-        render :json => ErrorResponse.new(ErrorCode::CANNOT_INSERT_MISSING_FIELDS, employee.errors.messages.to_s )
+        render :json => ErrorResponse.new(ErrorCode::CANNOT_INSERT_MISSING_FIELDS, employee.errors.messages.to_s)
       end
     rescue ActiveRecord::StatementInvalid => e
-      render :json => ErrorResponse.new(ErrorCode::DUPLICATE_RECORD, e.message )
+      render :json => ErrorResponse.new(ErrorCode::DUPLICATE_RECORD, e.message)
     end
   end
 
   def update_emp
     if !current_user.try(:can?, :update)
-      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized' )
+      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized')
       return
     end
 
@@ -104,38 +109,65 @@ class RestController < ApplicationController
       employee.update(employee_params)
 
       if !employee.valid?
-        render :json => ErrorResponse.new(ErrorCode::CANNOT_INSERT_MISSING_FIELDS, employee.errors.as_json.to_s )
+        render :json => ErrorResponse.new(ErrorCode::CANNOT_INSERT_MISSING_FIELDS, employee.errors.as_json.to_s)
         return
       end
 
       if employee.save
-        render :json => ErrorResponse.new(employee.id )
+        render :json => ErrorResponse.new(employee.id)
       else
-        render :json => ErrorResponse.new(employee.errorcode, employee.errors.to_s )
+        render :json => ErrorResponse.new(employee.errorcode, employee.errors.to_s)
       end
     rescue RestError => e
       render :json => e.error
     rescue ActiveRecord::RecordNotFound
-      render :json => ErrorResponse.new(ErrorCode::CANNOT_UPDATE_NONEXISTENT_RECORD, 'Record not found' )
+      render :json => ErrorResponse.new(ErrorCode::CANNOT_UPDATE_NONEXISTENT_RECORD, 'Record not found')
     rescue ActionController::UnpermittedParameters
-      render :json => ErrorResponse.new(ErrorCode::CANNOT_INSERT_UNKNOWN_FIELDS, 'Unknown fields' )
+      render :json => ErrorResponse.new(ErrorCode::CANNOT_INSERT_UNKNOWN_FIELDS, 'Unknown fields')
     rescue => e
-      render :json => ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, e.to_s )
+      render :json => ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, e.to_s)
     end
   end
 
   def set_password
-    render :json => ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, 'not implemeneted' )
+    if !params.has_key?(:rest) or !params[:rest].has_key?(:username) or !params[:rest].has_key?(:password)
+      render :json => ErrorResponse.new(ErrorCode::INVALID_USERNAME_OR_PASSWORD, 'Not authorized')
+      return
+    end
+
+    params.require(:rest).permit(:username, :password)
+
+    if params[:rest][:username] != current_user.username and !current_user.try(:can?, :set_password)
+      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized')
+      return
+    end
+
+    begin
+      employee = Employee.find_by_username(params[:rest][:username])
+      if employee.nil?
+        render :json => ErrorResponse.new(ErrorCode::INVALID_USERNAME_OR_PASSWORD, 'User not found' )
+        return
+      end
+    rescue ActiveRecord::RecordNotFound
+      render :json => ErrorResponse.new(ErrorCode::INVALID_USERNAME_OR_PASSWORD, 'User not found' )
+      return
+    end
+    employee.password = params[:rest][:password]
+    if !employee.save
+      render :json => ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, employee.errors.to_s )
+    else
+      render :json => ErrorResponse.new(ErrorCode::NONE)
+    end
   end
 
   def authenticate_employee
     employee = Employee.find_for_database_authentication(username: params[:username])
     if employee.nil?
-      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized for operation' )
+      render :json => { jwt: nil,  errorcode: ErrorCode::INVALID_USERNAME_OR_PASSWORD, error: 'Invalid username or password' }
     elsif employee.valid_password?(params[:password])
-      render json: payload(employee)
+      render json: jwt_token_response(employee)
     else
-      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized for operation' )
+      render :json =>  { jwt: nil,  errorcode: ErrorCode::INVALID_USERNAME_OR_PASSWORD, error: 'Not authorized for operation' }
     end
   end
 
@@ -143,7 +175,7 @@ class RestController < ApplicationController
 
   def authenticate_employee!
     begin
-      unless employee_id_in_token?
+      unless username_in_token?
         render :json => @error
         return
       end
@@ -152,44 +184,48 @@ class RestController < ApplicationController
       return
     end
 
-    @current_user = Employee.find(auth_token["employee_id"])
+    @current_user = Employee.find_by_username(@auth_token["username"])
+
     if @current_user.nil?
-      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized for operation' )
+      render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized for operation')
     end
   rescue JWT::VerificationError, JWT::DecodeError
-    render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized for operation' )
+    render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized for operation')
   end
 
   private
 
   def http_token
-    raise RestError.new(ErrorCode::NO_AUTHORIZATION_TOKEN, 'No authorization token') unless request.headers['Authorization'].present?
-    @http_token ||= if request.headers['Authorization'].present?
-                      request.headers['Authorization'].split(' ').last
-                    end
+    if request.headers['Authorization'].present?
+      @http_token = request.headers['Authorization'] #.split(' ').last
+    else
+      raise RestError.new(ErrorCode::NO_AUTHORIZATION_TOKEN, 'No authorization token')
+    end
   end
 
   def auth_token
-    @auth_token ||= JsonWebToken.decode(@http_token)[0]
+    @auth_token = JsonWebToken.decode(@http_token)
   rescue RestError => e
     raise e
-  rescue JWT::ExpiredSignature
-    raise RestError.new(ErrorCode::INVALID_AUTHORIZATION_TOKEN_EXPIRED, 'Authorization token expired')
   rescue => e
     raise RestError.new(ErrorCode::UNKNOWN_ERROR, e.to_s)
   end
 
-  def employee_id_in_token?
-    http_token && auth_token && auth_token["employee_id"].to_i
+  def username_in_token?
+    http_token && auth_token && @auth_token['username']
   end
 
-  def payload(employee)
-    return nil unless employee and employee.id
+  def jwt_token_response(employee)
+    return nil unless employee
     {
-        jwt: JsonWebToken.encode(employee.id),
+        jwt: JsonWebToken.encode(employee),
         errorcode: ErrorCode::NONE,
         error: nil
     }
+  end
+
+  def adjust_parameters
+    adjust_ids if params[:action] != 'set_password' and params[:action] != 'login'
   end
 
   def adjust_ids
@@ -203,7 +239,8 @@ class RestController < ApplicationController
       params.delete(:id)
     end
 
-    [:username, :firstName, :middleInitial, :lastName, :dateOfBirth, :dateOfEmployment, :bStatus].each do |key| params[:rest][key] = nil if !params[:rest].has_key?(key)
+    [:username, :firstName, :middleInitial, :lastName, :dateOfBirth, :dateOfEmployment, :bStatus].each do |key|
+      params[:rest][key] = nil if !params[:rest].has_key?(key)
 
     end
   end
@@ -211,16 +248,16 @@ class RestController < ApplicationController
   def employee_params
     if current_user.try(:can?, :set_password)
       params.require(:rest).permit(:id, :username,
-                     :firstName, :middleInitial, :lastName,
-                     :dateOfBirth,
-                     :dateOfEmployment,
-                     :bStatus, :email, :password, :employee_roles)
+                                   :firstName, :middleInitial, :lastName,
+                                   :dateOfBirth,
+                                   :dateOfEmployment,
+                                   :bStatus, :email, :password, :employee_roles)
     else
       params.require(:rest).permit(:id, :username,
-                     :firstName, :middleInitial, :lastName,
-                     :dateOfBirth,
-                     :dateOfEmployment,
-                     :bStatus, :email)
+                                   :firstName, :middleInitial, :lastName,
+                                   :dateOfBirth,
+                                   :dateOfEmployment,
+                                   :bStatus, :email)
     end
   end
 
