@@ -32,15 +32,25 @@ class RestController < ApplicationController
 
   def get_emp
     begin
-      employee = Employee.select(returned_employee_fields).find(params[:id])
-      render :json => employee
+      findparams = {}
+      [:id, :firstName, :middleInitial, :lastName, :username, :email, :dateOfBirth, :dateOfEmployment].each do |element|
+        findparams[element] = params[element] if params.has_key? element
+      end
+
+      employees = Employee.where(findparams)
+      if employees.count > 1
+        render :json => nil #ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, 'Record not found' )
+        return
+      end
+
+      render :json => employees[0]
     rescue ActiveRecord::RecordNotFound
       render :json => nil #ErrorResponse.new(ErrorCode::UNKNOWN_ERROR, 'Record not found' )
     end
   end
 
   def delete_emp
-    if !current_user.try(:can?, :delete)
+    if !@current_user.try(:can?, :delete)
       render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized')
       return
     end
@@ -66,7 +76,7 @@ class RestController < ApplicationController
   end
 
   def add_emp
-    if !current_user.try(:can?, :add)
+    if !@current_user.try(:can?, :add)
       render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized')
       return
     end
@@ -78,7 +88,7 @@ class RestController < ApplicationController
 
     employee = Employee.new employee_params
 
-    if !current_user.try(:can?, :set_password) || employee.password.blank?
+    if !@current_user.try(:can?, :set_password) || employee.password.blank?
       employee.password = SecureRandom.hex
     end
 
@@ -94,7 +104,7 @@ class RestController < ApplicationController
   end
 
   def update_emp
-    if !current_user.try(:can?, :update)
+    if !@current_user.try(:can?, :update)
       render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized')
       return
     end
@@ -137,7 +147,7 @@ class RestController < ApplicationController
 
     params.require(:rest).permit(:username, :password)
 
-    if params[:rest][:username] != current_user.username and !current_user.try(:can?, :set_password)
+    if params[:rest][:username] != @current_user.username and !@current_user.try(:can?, :set_password)
       render :json => ErrorResponse.new(ErrorCode::NOT_AUTHORIZED_FOR_OPERATION, 'Not authorized')
       return
     end
@@ -246,7 +256,7 @@ class RestController < ApplicationController
   end
 
   def employee_params
-    if current_user.try(:can?, :set_password)
+    if @current_user.try(:can?, :set_password)
       params.require(:rest).permit(:id, :username,
                                    :firstName, :middleInitial, :lastName,
                                    :dateOfBirth,

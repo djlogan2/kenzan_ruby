@@ -4,15 +4,25 @@ class EmployeesController < ApplicationController
   before_action :authenticate_employee!
   protect_from_forgery with: :exception
 
+  def fuckme
+    authenticate_employee!
+  end
+
   def index;
     @employees = Employee.all
   end
 
   def create
+    if !current_employee.try(:can?, :add)
+      @messages = 'Not authorized to add an employee'
+      @employees = index
+      render :index
+    end
+
     @employee = Employee.new(employee_params)
     @employee.bStatus = EmployeeStatus::ACTIVE
 
-    if !current_user.try(:can?, :set_password)
+    if !current_employee.try(:can?, :set_password)
       @employee.password = SecureRandom.hex
     end
 
@@ -30,7 +40,7 @@ class EmployeesController < ApplicationController
   end
 
   def new
-    if !current_user.try(:can?, :add)
+    if !current_employee.try(:can?, :add)
       @messages = 'Not authorized to add an employee'
       @employees = index
       render :index
@@ -49,6 +59,12 @@ class EmployeesController < ApplicationController
   end
 
   def edit;
+    if !current_employee.try(:can?, :update)
+      @messages = 'Not authorized to update an employee'
+      @employees = index
+      render :index
+    end
+
     begin
       @employee = Employee.select(returned_employee_fields).find(params[:id])
     rescue ActiveRecord::RecordNotFound
@@ -59,8 +75,8 @@ class EmployeesController < ApplicationController
   end
 
   def update;
-    if !current_user.try(:can?, :update)
-      @messages = 'Not authorized to add an employee'
+    if !current_employee.try(:can?, :update)
+      @messages = 'Not authorized to update an employee'
       @employees = index
       render :index
     end
@@ -81,7 +97,7 @@ class EmployeesController < ApplicationController
     @employee.dateOfBirth = p_employee.dateOfBirth
     @employee.dateOfEmployment = p_employee.dateOfEmployment
     @employee.bStatus = p_employee.bStatus
-    if current_user.try(:can?, :set_password)
+    if current_employee.try(:can?, :set_password)
       @employee.password = p_employee.password
       @employee.employee_roles = EmployeeRole.where(:role => params[:newroles])
     end
@@ -94,8 +110,8 @@ class EmployeesController < ApplicationController
   end
 
   def destroy
-    if !current_user.try(:can?, :delete)
-      @messages = 'Not authorized to add an employee'
+    if !current_employee.try(:can?, :delete)
+      @messages = 'Not authorized to delete an employee'
       @employees = index
       render :index
     end
@@ -121,7 +137,7 @@ class EmployeesController < ApplicationController
   protected
 
   def employee_params
-    if current_user.try(:can?, :set_password)
+    if current_employee.try(:can?, :set_password)
       params.require(:employee).permit(:id, :username,
                                        :firstName, :middleInitial, :lastName,
                                        :dateOfBirth,
