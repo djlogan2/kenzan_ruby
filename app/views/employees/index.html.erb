@@ -4,6 +4,7 @@
 <table>
   <tr>
     <th>username</th>
+    <th>Email</th>
     <th>First name</th>
     <th>MI</th>
     <th>Last name</th>
@@ -13,12 +14,17 @@
   <% @employees.each do |employee| %>
       <tr>
         <td><%= employee.username%></td>
+        <td><%= employee.email%></td>
         <td><%= employee.firstName%></td>
         <td><%= employee.middleInitial%></td>
         <td><%= employee.lastName%></td>
         <td><%= employee.dateOfBirth%></td>
         <td><%= employee.dateOfEmployment%></td>
-        <td><%= button_to 'Edit', edit_employee_path(employee), method: :get %></td>
+        <% if current_employee.can? :update %>
+          <td><%= button_to 'Edit', edit_employee_path(employee), method: :get %></td>
+        <% elsif current_employee.can? :delete %>
+          <td><%= button_to 'Delete', employee_path(employee), method: :delete %></td>
+        <% end %>
       </tr>
   <% end %>
 </table>

@@ -48,8 +48,9 @@ ActiveRecord::Schema.define(version: 201710261500000) do
     t.string "current_sign_in_ip"
     t.string "last_sign_in_ip"
     t.index ["reset_password_token"], name: "index_employees_on_reset_password_token", unique: true
+    t.index ["username"], name: "index_employees_on_username"
   end
 
-  add_foreign_key "employee_to_roles", "employee_roles"
-  add_foreign_key "employee_to_roles", "employees"
+  add_foreign_key "employee_to_roles", "employee_roles", on_delete: :cascade
+  add_foreign_key "employee_to_roles", "employees", on_delete: :cascade
 end

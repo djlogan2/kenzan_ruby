@@ -10,8 +10,8 @@
   <tr><td>Roles</td><td>
     <%= select_tag(
             :unused,
-            options_for_select(EmployeeRole.pluck(:role), @employee.employee_roles.pluck(:role)),
-            { :disabled => true, :multiple => true, :size => 5, :id => "emmployee_role" })
+            options_for_select(@employee.employee_roles.pluck(:role), @employee.employee_roles.pluck(:role)),
+            { :multiple => true, :id => "employee_role" })
     %>
   </td></tr>
 </table>

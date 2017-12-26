@@ -20,11 +20,25 @@ class Employee < ApplicationRecord
         firstName: firstName,
         middleInitial: middleInitial,
         lastName: lastName,
-        dateOfBirth: dateOfBirth.to_time,  # dateToDateTime(dateOfBirth).to_s,
-        dateOfEmployment: (dateOfEmployment.nil? ? nil : dateOfEmployment.to_time), # dateToDateTime(dateOfEmployment).to_s,
+        dateOfBirth: dateOfBirth.to_date,
+        dateOfEmployment: (dateOfEmployment.nil? ? nil : dateOfEmployment.to_date),
         email: email
     }
   end
+
+  def hasEmploymentDate
+    !dateOfEmployment.to_s.empty?
+  end
+
+#  def hasEmploymentDate=(hed)
+#    if hed == false || hed == 0
+#      dateOfBirth = nil
+#    else
+#      if dateOfBirth.to_s.empty?
+#        dateOfBirth = Date.now
+#      end
+#    end
+#  end
 
   def can? do_what
     case do_what
@@ -46,6 +60,6 @@ class Employee < ApplicationRecord
   end
 
   def self.default_scope
-    where(:bStatus => EmployeeStatus::ACTIVE) #.select([:id, :username, :firstName, :middleInitial, :lastName, :dateOfBirth, :dateOfEmployment])
+    where(:bStatus => EmployeeStatus::ACTIVE)
   end
 end

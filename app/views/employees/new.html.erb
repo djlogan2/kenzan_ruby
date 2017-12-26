@@ -4,7 +4,7 @@
     <table>
       <tr><td><%= f.label :username, 'Username' %></td><td><%= f.text_field :username %></td></tr>
       <tr><td><%= f.label :email, 'Email' %></td><td><%= f.email_field :email %></td></tr>
-      <% if @employee.has_attribute? :encrypted_password %>
+      <% if current_employee.try :can?, :set_password %>
         <tr><td><%= f.label :password, 'Password' %></td><td><%= f.password_field :password %></td></tr>
       <% end %>
       <tr><td><%= f.label :firstName, 'First name' %></td><td><%= f.text_field :firstName %></td></tr>
@@ -12,6 +12,18 @@
       <tr><td><%= f.label :lastName, 'Last name' %></td><td><%= f.text_field :lastName %></td></tr>
       <tr><td><%= f.label :dateOfBirth, 'Date of birth' %></td><td><%= f.text_field :dateOfBirth %></td></tr>
       <tr><td><%= f.label :dateOfEmployment, 'Date of employment' %></td><td><%= f.text_field :dateOfEmployment %></td></tr>
+      <% if current_employee.try :can?, :set_password %>
+          <tr>
+            <td><%= f.label :roles, 'Roles'%></td>
+            <td>
+              <%= select_tag(
+                      :newroles,
+                        options_for_select(EmployeeRole.pluck(:role), @employee.employee_roles.pluck(:role)),
+                        { :multiple => true, :size => 5, :id => "employee_role" })
+              %>
+            </td>
+          </tr>
+      <% end %>
       <tr><td><%= f.submit %></td></tr>
       <tr><td colspan="2"><%= @messages %></td></tr>
     </table>
