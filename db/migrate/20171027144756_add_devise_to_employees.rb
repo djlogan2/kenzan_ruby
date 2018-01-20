@@ -36,6 +36,7 @@ class AddDeviseToEmployees < ActiveRecord::Migration[5.1]
     end
 
     #add_index :employees, :email,                unique: true
+    add_index :employees, :username
     add_index :employees, :reset_password_token, unique: true
     # add_index :employees, :confirmation_token,   unique: true
     # add_index :employees, :unlock_token,         unique: true

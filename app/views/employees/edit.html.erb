@@ -1,9 +1,14 @@
 <h1>Employee#edit</h1>
+<div id='test_automation' name='Employee#edit'/>
 <%= form_for @employee do |f| %>
     <table>
       <tr>
         <td><%= f.label :username, 'Username' %></td>
         <td><%= f.text_field :username %></td>
+      </tr>
+      <tr>
+        <td><%= f.label :email, 'Email' %></td>
+        <td><%= f.text_field :email %></td>
       </tr>
       <tr>
         <td><%= f.label :firstName, 'First name' %></td>
@@ -19,11 +24,11 @@
       </tr>
       <tr>
         <td><%= f.label :dateOfBirth, 'Date of birth' %></td>
-        <td><%= f.text_field :dateOfBirth %></td>
+        <td><%= f.date_select :dateOfBirth, start_year: Date.today.prev_year(100).year, end_year: Date.today.year %></td>
       </tr>
       <tr>
         <td><%= f.label :dateOfEmployment, 'Date of employment' %></td>
-        <td><%= f.text_field :dateOfEmployment %></td>
+        <td><table><tr><td><%= f.check_box :hasEmploymentDate %></td><td><%= f.date_select :dateOfEmployment, start_year: Date.today.prev_year(100).year, end_year: Date.today.year %></td></tr></table></td>
       </tr>
       <% if @employee.has_attribute? :encrypted_password %>
         <tr>
@@ -35,8 +40,8 @@
             <td>
               <%= select_tag(
                       :newroles,
-                      options_for_select(EmployeeRole.pluck(:role), @employee.employee_roles.pluck(:role)),
-                      { :multiple => true, :size => 5, :id => "emmployee_role" })
+                        options_for_select(EmployeeRole.pluck(:role), @employee.employee_roles.pluck(:role)),
+                        { :disabled => true, :multiple => true, :size => 5, :id => "employee_role" })
               %>
             </td>
           </tr>
